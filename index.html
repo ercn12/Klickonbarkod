@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Clickon Barkod Okuyucu</title>
+    <!-- Html5Qrcode Core Library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            align-items: center;
+        }
+
+        header {
+            width: 100%;
+            background: #1e293b;
+            color: #fff;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border-bottom: 1px solid #334155;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #38bdf8;
+        }
+
+        header p {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        main {
+            width: 100%;
+            max-width: 480px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            border: 1px solid #334155;
+        }
+
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            min-height: 280px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #reader {
+            width: 100%;
+            height: 100%;
+        }
+
+        #reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            border-radius: 12px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 6px;
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .status-badge.success {
+            background: #059669;
+            color: #fff;
+        }
+
+        .status-badge.error {
+            background: #dc2626;
+            color: #fff;
+        }
+
+        .status-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #f8fafc;
+            word-break: break-all;
+            margin-top: 8px;
+            min-height: 28px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: #0284c7;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:active {
+            background: #0369a1;
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #f8fafc;
+        }
+
+        .btn-secondary:active {
+            background: #475569;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 14px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            font-size: 1rem;
+            color: #fff;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: #38bdf8;
+        }
+
+        .input-group button {
+            padding: 14px 20px;
+            background: #0284c7;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 16px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>CLICKON BARKOD BULUCU</h1>
+        <p>Kameradan okutun veya manuel aratın</p>
+    </header>
+
+    <main>
+        <!-- Kamera Kartı -->
+        <div class="card">
+            <div class="scanner-container">
+                <div id="reader"></div>
+            </div>
+            
+            <div class="controls-grid">
+                <button id="btnStart" class="btn" onclick="startScanner()">Kamerayı Başlat</button>
+                <button id="btnStop" class="btn btn-secondary" onclick="stopScanner()" style="display:none;">Durdur</button>
+            </div>
+        </div>
+
+        <!-- Durum ve Sonuç Kartı -->
+        <div class="card" style="text-align: center;">
+            <div class="section-title">TARAMA DURUMU</div>
+            <div id="statusBadge" class="status-badge">Kamera Hazır</div>
+            <div id="statusValue" class="status-value">-</div>
+        </div>
+
+        <!-- Manuel Arama Kartı -->
+        <div class="card">
+            <div class="section-title">MANUEL BARKOD / STOK KODU GİRİŞİ</div>
+            <div class="input-group">
+                <input type="text" id="manualInput" placeholder="Örn: 8690000123456" onkeypress="handleKeyPress(event)">
+                <button onclick="searchManual()">Bul</button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        Clickon / Klickon Ürün Arama Modülü
+    </footer>
+
+    <script>
+        let html5Qrcode = null;
+        let isScanning = false;
+
+        // Bip sesi üretici (Web Audio API)
+        function playBeepSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.value = 1000;
+                gainNode.gain.value = 0.1;
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start();
+                setTimeout(() => {
+                    oscillator.stop();
+                    audioCtx.close();
+                }, 150);
+            } catch (e) {
+                console.log("Ses çalınamadı");
+            }
+        }
+
+        function setStatus(text, type = "") {
+            const badge = document.getElementById("statusBadge");
+            badge.className = "status-badge " + type;
+            badge.innerText = text;
+        }
+
+        function processBarcode(barcode) {
+            const cleanBarcode = barcode.trim();
+            if (!cleanBarcode) return;
+
+            playBeepSound();
+            setStatus("Ürün Bulundu!", "success");
+            document.getElementById("statusValue").innerText = cleanBarcode;
+
+            if (isScanning) {
+                stopScanner();
+            }
+
+            // Ikas altyapısına uygun arama URL'si
+            const targetUrl = `https://klickon.com.tr/arama?q=${encodeURIComponent(cleanBarcode)}`;
+
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 500);
+        }
+
+        async function startScanner() {
+            if (isScanning) return;
+
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                setStatus("Hata: HTTPS Gereklidir", "error");
+                document.getElementById("statusValue").innerText = "Kamera erişimi için sitenin HTTPS adresinde olması gerekir.";
+                return;
+            }
+
+            try {
+                html5Qrcode = new Html5Qrcode("reader");
+                setStatus("Kamera Bağlanıyor...", "");
+                
+                const config = { 
+                    fps: 15, 
+                    qrbox: { width: 250, height: 150 },
+                    aspectRatio: 1.0
+                };
+
+                await html5Qrcode.start(
+                    { facingMode: "environment" }, 
+                    config, 
+                    (decodedText) => {
+                        processBarcode(decodedText);
+                    },
+                    (errorMessage) => {}
+                );
+
+                isScanning = true;
+                document.getElementById("btnStart").style.display = "none";
+                document.getElementById("btnStop").style.display = "block";
+                setStatus("Barkodu Hizalayın", "success");
+
+            } catch (err) {
+                console.error("Scanner Error:", err);
+                setStatus("Kamera Hatası", "error");
+                document.getElementById("statusValue").innerText = "Kamera izni verilmedi veya desteklenmiyor.";
+                isScanning = false;
+            }
+        }
+
+        async function stopScanner() {
+            if (html5Qrcode && isScanning) {
+                try {
+                    await html5Qrcode.stop();
+                    html5Qrcode.clear();
+                } catch (e) {
+                    console.error("Stop error:", e);
+                }
+                isScanning = false;
+                document.getElementById("btnStart").style.display = "block";
+                document.getElementById("btnStop").style.display = "none";
+                setStatus("Kamera Durduruldu", "");
+            }
+        }
+
+        function searchManual() {
+            const inputVal = document.getElementById("manualInput").value;
+            if (inputVal) {
+                processBarcode(inputVal);
+            }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                searchManual();
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            startScanner();
+        });
+    </script>
+</body>
+</html>
