@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Clickon Barkod Okuyucu</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            align-items: center;
+        }
+
+        header {
+            width: 100%;
+            background: #111827;
+            color: #fff;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        header p {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+
+        main {
+            width: 100%;
+            max-width: 480px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .scanner-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+
+        #reader {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            border: none !important;
+        }
+
+        #reader video {
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        .status-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            border: 1px solid #e5e7eb;
+            text-align: center;
+        }
+
+        .status-title {
+            font-size: 0.85rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .status-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1f2937;
+            word-break: break-all;
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: #2563eb;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-action:active {
+            background: #1d4ed8;
+        }
+
+        .manual-input-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            border: 1px solid #e5e7eb;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: #2563eb;
+        }
+
+        .input-group button {
+            padding: 12px 16px;
+            background: #111827;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 16px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>CLICKON BARKOD BULUCU</h1>
+        <p>Ürün barkodunu kamerasından okutun</p>
+    </header>
+
+    <main>
+        <!-- Kamera Alanı -->
+        <div class="scanner-card">
+            <div id="reader"></div>
+        </div>
+
+        <!-- Okunan Barkod Durumu -->
+        <div class="status-card">
+            <div class="status-title">Durum</div>
+            <div id="status" class="status-value">Kamera başlatılıyor...</div>
+        </div>
+
+        <!-- Manuel Arama -->
+        <div class="manual-input-card">
+            <div class="status-title">Kamera Çalışmıyorsa Manuel Yazın</div>
+            <div class="input-group">
+                <input type="text" id="manualBarcode" placeholder="Barkod / Stok Kodu kopyala/yaz">
+                <button onclick="searchManual()">Ara</button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        Clickon.com.tr Ürün Arama Asistanı
+    </footer>
+
+    <script>
+        // Bilinen Özel Barkod -> URL Eşleşmeleri (İsteğe bağlı güncellenebilir)
+        const customProductMap = {
+            // Örnek: "8690000000000": "https://klickon.com.tr/urun-linki"
+        };
+
+        function processBarcode(barcode) {
+            const statusEl = document.getElementById("status");
+            const cleanBarcode = barcode.trim();
+
+            if (!cleanBarcode) return;
+
+            statusEl.innerText = "Barkod Bulundu: " + cleanBarcode + " 🚀";
+            statusEl.style.color = "#2563eb";
+
+            // 1. Önce özel eşleşme veritabanımızda var mı kontrol et
+            if (customProductMap[cleanBarcode]) {
+                setTimeout(() => {
+                    window.location.href = customProductMap[cleanBarcode];
+                }, 500);
+                return;
+            }
+
+            // 2. Yoksa doğrudan Clickon (klickon.com.tr) arama motoruna yönlendir
+            const searchUrl = `https://klickon.com.tr/index.php?route=product/search&search=${encodeURIComponent(cleanBarcode)}`;
+            
+            setTimeout(() => {
+                window.location.href = searchUrl;
+            }, 600);
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Barkod okunduğunda bir kez işlem yapıp taramayı durdur/yönlendir
+            html5QrcodeScanner.clear();
+            processBarcode(decodedText);
+        }
+
+        function onScanFailure(error) {
+            // Her karede okuyamadığında sessiz kal
+        }
+
+        function searchManual() {
+            const inputVal = document.getElementById("manualBarcode").value;
+            if (inputVal) {
+                processBarcode(inputVal);
+            }
+        }
+
+        // Kamera Başlatma Kontrolü
+        window.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("status").innerText = "Barkod Hizalayın";
+
+            let html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader", 
+                { 
+                    fps: 15, 
+                    qrbox: { width: 260, height: 160 },
+                    aspectRatio: 1.0,
+                    showTorchButtonIfSupported: true
+                },
+                /* verbose= */ false
+            );
+            
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        });
+    </script>
+</body>
+</html>
